@@ -51,8 +51,7 @@ def compute_energy_mode(uhat, vhat, kx, ky, n, m):
     #uhat, vhat = compute_velocity_fft(omega_hat, kx, ky)
     kx_idx = kx % n
     ky_idx = ky % m 
-    
-    energy = 0.5 * (jnp.abs(uhat[kx_idx, ky_idx])**2 + jnp.abs(vhat[kx_idx, ky_idx])**2) / (n*m)**2
+    energy = 0.5 * (jnp.abs(uhat[kx_idx, ky_idx])**2 + jnp.abs(vhat[kx_idx, ky_idx])**2) / jnp.float64((n*m)**2)
     return energy 
     
     

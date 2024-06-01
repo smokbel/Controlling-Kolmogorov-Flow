@@ -1,7 +1,7 @@
 import dataclasses
 import jax.numpy as jnp
-from flow import FlowConfig
-import utils
+from equations.flow import FlowConfig
+import equations.utils as utils
 
 @dataclasses.dataclass
 class PseudoSpectralNavierStokes2D():
@@ -64,10 +64,29 @@ class PseudoSpectralNavierStokes2D():
     advection_hat = jnp.fft.rfftn(advection)
     
     forcing_hat = self.forcing_term()
+    control_hat = self.control_term()
     advection_hat = utils.dealiasing(advection_hat) # 2/3 dealiasing rule
 
-    terms = advection_hat + forcing_hat
+    terms = advection_hat + forcing_hat + control_hat
     return terms
+  
+  
+  def control_term(self):
+      """Computes the user-specified forcing term of the vorticity equation 
+      Args:
+        omega_hat: Fourier transformed vorticity term
+        forcing: Forcing function as specified by environment or user
+      """
+      cfx, cfy  = self.flow.control_function
+      if cfx is not None:
+        kx, ky = self.grid
+        cfx_hat, cfy_hat = jnp.fft.rfft2(cfx), jnp.fft.rfft2(cfy)
+        # Transform the velocity forcing into vorticity 
+        derivative_term = (2j * jnp.pi)
+        f_vorticity = derivative_term * (cfy_hat*kx - cfx_hat*ky)
+        return f_vorticity
+      else:
+        return None 
     
     
   def forcing_term(self):

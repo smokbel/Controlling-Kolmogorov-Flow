@@ -15,6 +15,7 @@ class FlowConfig:
         self.grid_size = config.get("grid_size", self.DEFAULT_GRID_SIZE)
         self.domain_x = config.get("domain_x", self.DEFAULT_DOMAIN_X)
         self.domain_y = config.get("domain_y", self.DEFAULT_DOMAIN_Y)
+        self.control_function = ( jnp.zeros_like(self.create_mesh()[0]), jnp.zeros_like(self.create_mesh()[1]) )
     
     def create_mesh(self):
         """Create jax grid given the desired dimensions and spacing in real space
