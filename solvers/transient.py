@@ -1,8 +1,7 @@
 import jax.numpy as jnp 
-from jax import lax
+from jax import lax, jit, profiler
 import tree_math
 
-    
 def RK4_CN(equation, dt):
   
   """ Crank-Nicolson RK4 implicit-explicit time stepping scheme
@@ -35,18 +34,35 @@ def RK4_CN(equation, dt):
   
   return time_step_fn
 
-def iterative_func(func, initialization, steps, save_n):
-  """Lax.scan to iteratively apply a function.
+
+def iterative_func(func, initialization, steps, save_n, ignore_intermediate_steps=True):
+  """
+  Lax.scan to iteratively apply a function given an initial value 
 
   Args:
-      func (method): The time stepping function
-      initialization(grid array): The initial fft vorticity field
-      steps (int): number of timesteps
-      save_n (int): Save every n steps
+      func (method): the time stepping function
+      initialization(grid array): the initial fft vorticity field
+      steps (int):  number of timesteps
+      save_n (int): save every n steps
+      ignore_intermediate_steps (bool): if saving every n steps, ignore intermediate steps.
+                                        this drastically reduces the memory requirements.
       
   """
+  if ignore_intermediate_steps:
+    
+    def inner_scan(initialization):
+      f = lambda init, inputs: (func(init), init)
+      final_state, outputs = lax.scan(f, initialization, xs=None, length=save_n)
+      return final_state
+    
+    outer_scan = lambda init, inputs: (inner_scan(init), inner_scan(init))
+    outer_steps = int(steps / save_n)
+    final_state, outputs = lax.scan(outer_scan, initialization, xs=None, length=outer_steps)
+    return final_state, outputs
   
-  f = lambda init, inputs: (func(init), init)
-  # Scan used to iteratively apply timestepping
-  final_state, outputs = lax.scan(f, initialization, xs=None,length=steps)
-  return final_state, outputs[save_n-1::save_n]
+  else:
+    
+    f = lambda init, inputs: (func(init), init)
+    # Scan used to iteratively apply timestepping
+    final_state, outputs = lax.scan(f, initialization, xs=None,length=steps)
+    return final_state, outputs

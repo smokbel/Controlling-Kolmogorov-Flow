@@ -1,5 +1,8 @@
 import jax.numpy as jnp 
 import jax 
+import matplotlib.pyplot as plt 
+import matplotlib.animation as animation
+from matplotlib.animation import PillowWriter
 
 def compute_velocity_fft(omega_hat, kx, ky):
     """
@@ -77,4 +80,73 @@ def compute_energy_dissipation(omega_hat, kx, ky, nu, n):
     epsilon = jnp.sum(avg_epsilon)
     
     return epsilon 
+    
+def compute_tke(omega_hat, kx, ky, n):
+    """
+        Computes the TKE of the systen given the fft vorticity field.
+        
+    Args: 
+        omega_hat: fft vorticity 
+        kx: wavenumber x
+        ky: wavenumber y 
+        n: grid length
+        
+    """
+    
+    uhat, vhat = compute_velocity_fft(omega_hat, kx, ky)
+    ureal = jnp.fft.irfftn(uhat)
+    vreal = jnp.fft.irfftn(vhat)
+    avg_tke = 0.5 * (jnp.abs(ureal)**2 + jnp.abs(vreal)**2) * (1/n)
+    tke = jnp.sum(avg_tke)
+    
+    return tke 
+
+def compute_divergence(omega_hat, kx, ky):
+    """
+        Computes the divergence of the systen given the fft vorticity field.
+        
+    Args: 
+        omega_hat: fft vorticity 
+        kx: wavenumber x
+        ky: wavenumber y 
+    """
+    
+    uhat, vhat = compute_velocity_fft(omega_hat, kx, ky)
+    ureal = jnp.fft.irfftn(uhat)
+    vreal = jnp.fft.irfftn(vhat)
+    du_dx = jnp.gradient(ureal, axis=0) 
+    dv_dy = jnp.gradient(vreal, axis=1)
+
+    return du_dx + dv_dy 
+    
+def create_animation(trajectory, gif_name, frame_interval_factor):
+    """
+        Produces an animation of the trajectory.
+        
+    Args: 
+        trajectory: numpy file of fft vorticity trajectory
+        gif_name: file name of gif file that will be saved 
+        interval: frame interval as related to the length of the trajectory. 
+    """
+    trajectory = jnp.load(trajectory)
+    simulation = jnp.fft.irfftn(trajectory, axes=(1,2))
+
+    fig, ax = plt.subplots()
+    cax = ax.imshow(simulation[0], cmap='icefire', vmin=-8, vmax=8,interpolation='nearest')
+    fig.colorbar(cax)
+    
+    num_frames = len(simulation)
+    interval = int(num_frames * frame_interval_factor)
+
+    timestamp = ax.text(0.5, 1.05, '', transform=ax.transAxes, ha='center')
+
+    def update_frame(frame):
+        cax.set_array(simulation[frame])
+        timestamp.set_text(f'Time: {frame}')
+        return cax, timestamp
+
+    ani = animation.FuncAnimation(fig, update_frame, frames=num_frames, interval=interval)
+
+    # Save as a GIF
+    ani.save('{}.gif'.format(gif_name), writer=PillowWriter(fps=interval))
     
