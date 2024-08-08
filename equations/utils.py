@@ -60,7 +60,7 @@ def compute_energy_mode(uhat, vhat, kx, ky, n, m):
     
 def compute_energy_dissipation(omega_hat, kx, ky, nu, n):
     """
-        Computes the energy dissipation of the systen given the fft vorticity field.
+        Computes the energy dissipation of the system given the fft vorticity field.
         
     Args: 
         omega_hat: fft vorticity 
@@ -96,8 +96,8 @@ def compute_tke(omega_hat, kx, ky, n):
     uhat, vhat = compute_velocity_fft(omega_hat, kx, ky)
     ureal = jnp.fft.irfftn(uhat)
     vreal = jnp.fft.irfftn(vhat)
-    avg_tke = 0.5 * (jnp.abs(ureal)**2 + jnp.abs(vreal)**2) * (1/n)
-    tke = jnp.sum(avg_tke)
+    avg_tke = 0.5 * (jnp.abs(ureal)**2 + jnp.abs(vreal)**2) 
+    tke = jnp.sum(avg_tke) * (1/n)
     
     return tke 
 
@@ -128,11 +128,12 @@ def create_animation(trajectory, gif_name, frame_interval_factor):
         gif_name: file name of gif file that will be saved 
         interval: frame interval as related to the length of the trajectory. 
     """
-    trajectory = jnp.load(trajectory)
+    if type(trajectory) == str:
+        trajectory = jnp.load(trajectory)
     simulation = jnp.fft.irfftn(trajectory, axes=(1,2))
 
     fig, ax = plt.subplots()
-    cax = ax.imshow(simulation[0], cmap='icefire', vmin=-8, vmax=8,interpolation='nearest')
+    cax = ax.imshow(simulation[0], cmap='icefire',interpolation='nearest')
     fig.colorbar(cax)
     
     num_frames = len(simulation)
