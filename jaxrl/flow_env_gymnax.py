@@ -23,13 +23,15 @@ from equations.flow import FlowConfig
 # Physical parameters of Kolmogorov environment #
 ################################################# 
 
-n,m = 64,64 # Gridsize (square Cartesian grid)
+
+n,m = 256,256 # Gridsize (square Cartesian grid)
 flow = FlowConfig(grid_size=(n, m)) # Initializing flow env 
-flow.Re = 350 # Reynolds number 
+flow.Re = 250 # Reynolds number 
 flow.k = 4 # Forcing wavenumber
 dt = 0.001 # Timestep 
 save_time = 1 # Save every 'save_time' seconds (for visualization)
-end_time = 5 # Actor time length (action applied for 'end_time' seconds)
+end_time = 10 # Actor time length (action applied for 'end_time' seconds)
+
 
 ##########################################
 # Gymnax environment for Kolmogorov flow #
@@ -48,20 +50,15 @@ class EnvParams(environment.EnvParams):
     min_obs: Any = -jnp.inf
     max_obs: Any = jnp.inf
     dt: float = 0.001
-    k1: int = 1
-    k2: int = 2
-    k3: int = 3
-    k4: int = 4
-    k5: int = 5
-    k6: int = 6
-    k7: int = 7
-    k8: int = 8
-    action_dim: int = 8
+    k1: int = 4
+    k2: int = 5
+    k3: int = 6
+    k4: int = 7
+    action_dim: int = 4
     obs_dim: int = 8
     action_time: int = end_time # Action length in seconds, same as flow solver end time 
     max_steps_in_episode: int = 100 # Episode length in seconds 
-    
-    
+        
 class KolmogorovFlow(environment.Environment[EnvState, EnvParams]):
     """JAX Compatible  version of Kolmogorov Flow gym environment."""
 
@@ -86,18 +83,17 @@ class KolmogorovFlow(environment.Environment[EnvState, EnvParams]):
         # Compute the reward based on the current state
         tke = self._compute_avg_TKE(state)
         #jax.debug.print("Sampled action in REWARD: {}", action)
-        a1, a2, a3, a4, a5, a6, a7, a8 = action[0], action[1], action[2], action[3], action[4], action[5], action[6], action[7]
-        reward = -((-1*tke) + 37*(a1+a2+a3+a4+a5+a6+a7+a8))  # use abs value of the actions 
+        a1, a2, a3, a4 = action[0], action[1], action[2], action[3]
+        reward = -((-1*tke) + 75*(a1+a2+a3+a4))  # use abs value of the actions 
         return reward
     
     def _apply_action(self, 
                       action: jnp.ndarray, params: EnvParams, state: EnvState) -> jnp.ndarray: 
         x, y = flow.create_mesh()
-        #jax.debug.print("Sampled action in APPLY ACTION: {}", action)
-        a1, a2, a3, a4, a5, a6, a7, a8 = action[0], action[1], action[2], action[3], action[4], action[5], action[6], action[7]
-        k1, k2, k3, k4, k5, k6, k7, k8 = params.k1, params.k2, params.k3, params.k4, params.k5, params.k6, params.k7, params.k8 
+        a1, a2, a3, a4 = action[0], action[1], action[2], action[3]
+        k1, k2, k3, k4 = params.k1, params.k2, params.k3, params.k4 
         def control_fn(y):
-            return (a1*jnp.sin(k1*y) + a2*jnp.sin(k2*y) + a3*jnp.sin(k3*y) + a4*jnp.sin(k4*y) + a5*jnp.sin(k5*y) + a6*jnp.sin(k6*y) + a7*jnp.sin(k7*y) + a8*jnp.sin(k8*y), jnp.zeros_like(y))
+            return (a1*jnp.sin(k1*y) + a2*jnp.sin(k2*y) + a3*jnp.sin(k3*y) + a4*jnp.sin(k4*y), jnp.zeros_like(y))
 
         flow.control_function = control_fn(y)
         equation = PseudoSpectralNavierStokes2D(flow)
@@ -150,8 +146,8 @@ class KolmogorovFlow(environment.Environment[EnvState, EnvParams]):
         equation = PseudoSpectralNavierStokes2D(flow)
         step_fn = transient.RK4_CN(equation, dt)
         initial_state = flow.initialize_state()
-        total_steps = int(5 // 0.001)
-        steps_to_save = int(1 // 0.001)
+        total_steps = int(end_time // dt)
+        steps_to_save = int(save_time // dt)
         
         _, init_trajectory = transient.iterative_func(step_fn, initial_state, total_steps, steps_to_save)
         state = EnvState(time=0, trajectory=init_trajectory, terminal=False, new_init=init_trajectory[-1])
@@ -165,43 +161,32 @@ class KolmogorovFlow(environment.Environment[EnvState, EnvParams]):
      
         return mode_energy
     
-    def _calculate_mode_velocity(self, state, k1, k2):
+    def _calculate_velocity_point(self, state, k1, k2):
+        # Calculate velocity point 
         kx, ky = flow.create_fft_mesh()
         uhat, vhat = compute_velocity_fft(state, kx, ky)
-        mode_velocity = compute_velocity_mode(uhat, vhat, k1, k2, n, m)
+        point_velocity = compute_real_velocity_point(uhat, vhat, k1, k2)
         
-        return mode_velocity 
-    
-    # def get_obs(self, state: EnvState, params: EnvParams, key=None) -> chex.Array:
-        
-    #     def calculate_energy(trajectory):
-    #         e1, e2, e3, e4 = self._calculate_mode_energy(trajectory, params.k1), self._calculate_mode_energy(trajectory,  params.k2), self._calculate_mode_energy(trajectory,  params.k3), self._calculate_mode_energy(trajectory,  params.k4)
-    #         return jnp.array([e1, e2, e3, e4])
-
-    #     def scan_fn(carry, state):
-    #         energies = calculate_energy(state)
-    #         return carry, energies
-        
-    #     trajectory = state.trajectory
-    #     _, all_energy = lax.scan(scan_fn, None, trajectory)
-    #     jax.debug.print("all energy shape: {}", all_energy.shape)
-                
-    #     return jnp.mean(all_energy, axis=0)
+        return point_velocity 
     
     def get_obs(self, state: EnvState, params: EnvParams, key=None) -> chex.Array:
         
         def calculate_velocity(trajectory):
-            v1, v2, v3, v4, v5, v6, v7, v8 = self._calculate_mode_velocity(trajectory, params.k1, 0), self._calculate_mode_velocity(trajectory,  params.k2, 0), self._calculate_mode_velocity(trajectory,  params.k3, 0), self._calculate_mode_velocity(trajectory,  params.k4, 0), self._calculate_mode_velocity(trajectory, 0, params.k1), self._calculate_mode_velocity(trajectory, 0, params.k2), self._calculate_mode_velocity(trajectory, 0, params.k3), self._calculate_mode_velocity(trajectory, 0, params.k4)
+            v1, v2, v3, v4, v5, v6, v7, v8 = self._calculate_velocity_point(trajectory, 28, 6), self._calculate_velocity_point(trajectory,  61, 2), self._calculate_velocity_point(trajectory,  61, 37), self._calculate_velocity_point(trajectory,  31, 16), self._calculate_velocity_point(trajectory, 20, 1), self._calculate_velocity_point(trajectory, 59, 57), self._calculate_velocity_point(trajectory, 35, 1), self._calculate_velocity_point(trajectory, 16, 24)
             return jnp.array([v1, v2, v3, v4, v5, v6, v7, v8])
-
-        def scan_fn(carry, state):
-            energies = calculate_velocity(state)
-            return carry, energies
         
+        def calculate_energy(trajectory):
+            e1, e2, e3, e4 = self._calculate_mode_energy(trajectory, params.k1), self._calculate_mode_energy(trajectory,  params.k2), self._calculate_mode_energy(trajectory,  params.k3), self._calculate_mode_energy(trajectory,  params.k4)
+            return jnp.array([e1, e2, e3, e4])
+        
+        def scan_fn(carry, state):
+            obs_val = calculate_velocity(state) # To use energy observation, swap this with calculate_energy
+            return carry, obs_val
+            
         trajectory = state.trajectory
-        _, all_energy = lax.scan(scan_fn, None, trajectory)
+        _, all_obs = lax.scan(scan_fn, None, trajectory)
                         
-        return jnp.mean(all_energy, axis=0)
+        return jnp.mean(all_obs, axis=0)
 
     def is_terminal(self, state: EnvState, params: EnvParams) -> jnp.ndarray:
         """Check whether state is terminal."""
@@ -247,7 +232,7 @@ class KolmogorovFlow(environment.Environment[EnvState, EnvParams]):
     #     )
     #     return spaces.Dict(
     #         {
-    #             "position": spaces.Box(low[0], high[0], (), dtype=jnp.float32),
+    #             "position": spaces.Box(low[0], high[0], (), dtype=jnp.$),
     #             "time": spaces.Discrete(params.max_steps_in_episode),
     #         }
     #     )

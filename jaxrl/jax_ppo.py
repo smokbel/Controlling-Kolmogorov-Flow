@@ -17,7 +17,8 @@ from flax.training.train_state import TrainState
 import distrax
 import sys, os
 import flow_env_gymnax
-#from . import flow_env_gymnax
+#import flow_back
+from . import flow_env_gymnax
 import pickle
 import flax.serialization
 import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ env = flow_env_gymnax.KolmogorovFlow()
 env_params = env.default_params
 
 config = {
-        "LR": 8e-5, # try 3e-4 - 1e-5 (play around with it) 1e-4
+        "LR": 1e-4, # try 3e-4 - 1e-5 (play around with it) 1e-4
         "NUM_ENVS": 4,
         "NUM_STEPS": 40, # 40 
         "TOTAL_TIMESTEPS": 100,# 4000
@@ -43,7 +44,7 @@ config = {
         "GAMMA": 0.99,
         "GAE_LAMBDA": 0.985, # can tune to go up to 0.995. 0.98
         "CLIP_EPS": 0.2,
-        "ENT_COEF": 0.0, # can be increased to approx 0.1 or stay the same
+        "ENT_COEF": 0.0, # can be increased to approx 0.1 or 0.2 or stay the same
         "VF_COEF": 0.5,
         "MAX_GRAD_NORM": 0.5,
         "ACTIVATION": "tanh", # mish activation function is good to try 
@@ -227,8 +228,6 @@ def make_train(config):
                 pi, value = network.apply(train_state.params, last_obs)
                 action = pi.sample(seed=_rng) # clip action here 
                 #action = jnp.clip(action, 0, 1)
-                #jax.debug.print("Sampled action IN SCRIPT: {}", action)
-                
                 log_prob = pi.log_prob(action)
 
                 # STEP ENV
@@ -397,7 +396,7 @@ if __name__ == "__main__":
         "LR": 1e-4, # try 3e-4 - 1e-5 (play around with it) 1e-4
         "NUM_ENVS": 4,
         "NUM_STEPS": 10, # 40 
-        "TOTAL_TIMESTEPS": 4000,# 4000
+        "TOTAL_TIMESTEPS": 400,# 4000
         "UPDATE_EPOCHS": 10, #10
         "NUM_MINIBATCHES": 8, # 8
         "GAMMA": 0.99,
@@ -420,14 +419,13 @@ if __name__ == "__main__":
 
     # # After training is completed
     trained_params = out['runner_state'][0].params  # Access the trained parameters
-    save_model(trained_params, 'trained_model_new_actions_obs.pkl')
-    
+    save_model(trained_params, 'trained_model_test.pkl')
     
     plt.plot(out["metrics"]["returned_episode_returns"].mean(-1).reshape(-1))
     plt.xlabel("Updates")
     plt.ylabel("Return")
     plt.show() 
-    plt.savefig("plot_new_actions.png", format='png')
+    plt.savefig("plot_new_obs_sep_15.png", format='png')
 
     # Load model parameters
     # loaded_params = load_model('trained_model_clipped.pkl')
