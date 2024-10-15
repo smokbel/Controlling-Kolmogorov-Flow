@@ -19,7 +19,7 @@ The vorticity field can be initialized with `flow.initialize_state()` for simpli
 
 ## Solver details 
 
-This project uses a fourth order implicit-explicit Runge-Kutta time stepping scheme. The user can specify the length of the simulation and the uniform interval desired for saving: 
+This project uses a fourth order implicit-explicit Runge-Kutta time stepping scheme from [2]. The user can specify the length of the simulation and the uniform interval desired for saving: 
 
 ```
 dt = 0.001
@@ -39,3 +39,15 @@ In this case, the simulation trajectory will be stored in `full_trajectory`.
 ## Further details
 
 For computing and visualizing the extreme energy events in Kolmogorov flow, refer to `kolmogorov_demo.ipynb`. 
+
+## References 
+
+The references used when creating this code: 
+
+[1] Z. Yin, H.J.H. Clercx, D.C. Montgomery,
+An easily implemented task-based parallel scheme for the Fourier pseudospectral solver applied to 2D Navier–Stokes turbulence,
+Computers & Fluids,Volume 33, Issue 4, 2004, Pages 509-520, ISSN 0045-7930,
+https://doi.org/10.1016/j.compfluid.2003.06.003.
+
+[2] G. Dresdner, D. Kochkov, P. Norgaard, L. Zepeda-N´u˜nez, J. A. Smith, M. P. Brenner, and
+S. Hoyer, “Learning to correct spectral methods for simulating turbulent flows,” 2022.
