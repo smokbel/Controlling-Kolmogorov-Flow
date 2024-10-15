@@ -118,8 +118,8 @@ def compute_energy_dissipation(omega_hat, kx, ky, nu, n):
     dv_dx = jnp.gradient(vreal, axis=0)
     du_dx = jnp.gradient(ureal, axis=0)
     dv_dy = jnp.gradient(vreal, axis=1)
-    avg_epsilon = 2 * nu * ((du_dx)**2 + (dv_dy)**2 + (du_dy+ dv_dx)**2) * (1/n)
-    epsilon = jnp.sum(avg_epsilon)
+    avg_epsilon = 2 * nu * ((du_dx)**2 + (dv_dy)**2 + (du_dy+ dv_dx)**2)
+    epsilon = jnp.sum(avg_epsilon) / (4*jnp.pi**2)
     
     return epsilon 
     
