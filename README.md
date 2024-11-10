@@ -1,6 +1,10 @@
 # Controlling-Kolmogorov-Flow
 Controlling extreme energy events in turbulent flow (2D Kolmogorov flow). 
 
+## Usage notes
+
+If you plan to use this code for research purposes that may result in publications, please contact me first at sajedam@uw.edu. 
+
 ## Requirements 
 
 This project assumes you have the following Python libraries installed: 
