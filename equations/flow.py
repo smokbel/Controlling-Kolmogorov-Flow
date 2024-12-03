@@ -78,4 +78,4 @@ class FlowConfig:
     
     @property
     def nu(self):
-        return (jnp.pi * 2) / self.Re 
+        return 1 / self.Re 
