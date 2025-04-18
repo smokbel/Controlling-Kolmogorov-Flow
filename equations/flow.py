@@ -3,7 +3,7 @@ from jax import grad
 
 class FlowConfig:
     
-    DEFAULT_REYNOLDS = 200
+    DEFAULT_REYNOLDS = 40
     DEFAULT_WAVENUMBER = 4
     DEFAULT_GRID_SIZE = (64, 64)
     DEFAULT_DOMAIN_X = (0, 2*jnp.pi)
