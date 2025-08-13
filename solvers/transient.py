@@ -1,6 +1,8 @@
 import jax.numpy as jnp 
 from jax import lax, jit, profiler
 import tree_math
+import jax
+from functools import partial
 
 def RK4_CN(equation, dt):
   
@@ -51,18 +53,30 @@ def iterative_func(func, initialization, steps, save_n, ignore_intermediate_step
   if ignore_intermediate_steps:
     
     def inner_scan(initialization):
-      f = lambda init, inputs: (func(init), init)
+      @partial(jax.checkpoint,
+         policy=jax.checkpoint_policies.dots_with_no_batch_dims_saveable)
+      def f(init, inputs):
+        return (func(init), init)
+      # f = lambda init, inputs: (func(init), init)
       final_state, outputs = lax.scan(f, initialization, xs=None, length=save_n)
       return final_state
     
-    outer_scan = lambda init, inputs: (inner_scan(init), inner_scan(init))
+    @partial(jax.checkpoint,
+        policy=jax.checkpoint_policies.dots_with_no_batch_dims_saveable)
+    def outer_scan(init, inputs):
+      return (inner_scan(init), inner_scan(init))
+    
+    # outer_scan = lambda init, inputs: (inner_scan(init), inner_scan(init))
     outer_steps = int(steps / save_n)
     final_state, outputs = lax.scan(outer_scan, initialization, xs=None, length=outer_steps)
     return final_state, outputs
   
   else:
-    
-    f = lambda init, inputs: (func(init), init)
+    @partial(jax.checkpoint,
+        policy=jax.checkpoint_policies.dots_with_no_batch_dims_saveable)
+    def f(init, inputs):
+      return (func(init), init)
+    # f = lambda init, inputs: (func(init), init)
     # Scan used to iteratively apply timestepping
     final_state, outputs = lax.scan(f, initialization, xs=None,length=steps)
     return final_state, outputs
