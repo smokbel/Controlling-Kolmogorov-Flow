@@ -29,7 +29,7 @@ def get_extreme_event_times(trajectory):
     # Compute energy dissipation for each timestep
     dissipation = []
     for omega_hat in trajectory:
-        total_epsilon = utils.compute_energy_dissipation(omega_hat, kx, ky, flow.nu, n)    
+        total_epsilon = utils.compute_energy_dissipation(omega_hat, flow.nu)    
         dissipation.append(total_epsilon)
     mean_diss = jnp.mean(np.array(dissipation))
     event_times = []
