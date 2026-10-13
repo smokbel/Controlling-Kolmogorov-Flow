@@ -82,7 +82,7 @@ class KolmogorovFlow(gym.Env):
         return np.array([observation]), reward, done, {}
     
     def compute_measurement(self, state):
-        return utils.compute_energy_dissipation(state, kx, ky, flow.nu, 256)
+        return utils.compute_energy_dissipation(state, flow.nu)
     
     def compute_energy(self, state):
         uhat, vhat = utils.compute_velocity_fft(state, kx, ky)

@@ -93,34 +93,28 @@ def compute_real_velocity_point(uhat, vhat, x_idx, y_idx):
     velocity_mag = jnp.sqrt((jnp.abs(ureal[x_idx, y_idx])**2 + jnp.abs(vreal[x_idx, y_idx])**2))
     return velocity_mag 
 
-def compute_energy_dissipation(omega_hat, kx, ky, nu, n):
+def compute_energy_dissipation(omega_hat, nu):
     """
         Computes the energy dissipation of the system given the fft vorticity field.
         The instantaneous energy dissipation rate can be estimated by:
             Ɛ(x,t) = 2v<(S_ij S_ij)> [2]
-        where S_ij denotes the fluctuation strain-rate tensor and v denotes the kinematic viscosity [1,2]. 
+        where S_ij denotes the fluctuation strain-rate tensor and v denotes the kinematic viscosity [1,2]. For periodic incompressible flows, the energy dissipation corresponds to the enstrophy and can be modeled by integrating the square of the vorticity [3,4]:
+            nu/Area * \int |\omega(x,y)|^2 dxdy
+        
     [1] Pope, 2000
     [2] Buaria et. al, eq 1.1 in doi: 10.1098/rsta.2021.0088
+    [3] Doering, C. R. and Gibbon, J. D. (1995). Applied Analysis of the Navier-Stokes Equations, p. 11, Cambridge University Press, Cambridge. ISBN 052144568-X.
+    [4] Farazmand, Mohammad. "An adjoint-based approach for finding invariant solutions of Navier–Stokes equations." Journal of Fluid Mechanics 795 (2016): 278-312. (Eq. 4.3(b))
         
     Args: 
         omega_hat: fft vorticity 
-        kx: wavenumber x
-        ky: wavenumber y 
         nu: kinematic viscosity 
-        n: grid length
-        
     """
     
-    uhat, vhat = compute_velocity_fft(omega_hat, kx, ky)
-    ureal = jnp.fft.irfftn(uhat)
-    vreal = jnp.fft.irfftn(vhat)
-    du_dy = jnp.gradient(ureal, axis=1) 
-    dv_dx = jnp.gradient(vreal, axis=0)
-    du_dx = jnp.gradient(ureal, axis=0)
-    dv_dy = jnp.gradient(vreal, axis=1)
-    avg_epsilon = 2 * nu * ((du_dx)**2 + (dv_dy)**2 + (du_dy+ dv_dx)**2)
-    epsilon = jnp.sum(avg_epsilon) / (4*jnp.pi**2)
+    omega = jnp.fft.irfftn(omega_hat)
     
+    # 1/Area * Integral is the same as the mean
+    epsilon = nu * jnp.mean(omega**2)
     return epsilon 
     
 def compute_tke(omega_hat, kx, ky, n):
